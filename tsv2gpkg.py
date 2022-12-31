@@ -9,7 +9,6 @@ import zipfile
 import pandas as pd
 import geopandas as gp
 
-
 pd.set_option('display.max_columns', None)
 
 # EPSG:4326 WG 84
@@ -41,44 +40,53 @@ def to_file(gf, filepath):
 def get_keys(filestub):
     keys = set()
     with zipfile.ZipFile(f'data/{filestub}.zip') as zf:
-        with zf.open(f'{filestub}.tsv') as fin:
+        filename = f'{filestub}.tsv'
+        zf.getinfo(filename)
+        with zf.open(filename) as fin:
             while n := fin.readline():
                 bbuffer = io.BytesIO(n)
                 line = io.TextIOWrapper(bbuffer, encoding='utf-8').read()
                 k = line.split('\t').pop(0)
+                if '"Feature":' in k:
+                    raise(KeyError)
                 keys.add(k)
     return keys
 
 BUFFERSIZE = 512*1024*1024
 
-def to_csv(filestub):
-    with zipfile.ZipFile(f'data/{filestub}.zip') as zf:
-        with zf.open(f'{filestub}.tsv') as fin:
-            ebuffer = ''
-            m = 0
-            while n := fin.read(BUFFERSIZE):
-                now = dt.datetime.now() - START
-                m += 1
-                print(f'{now}\tread\toutput: {str(m).zfill(3)}')
-                bbuffer = io.BytesIO(n)
-                tbuffer = io.TextIOWrapper(bbuffer, encoding='utf-8').read()
-                tbuffer = ebuffer + tbuffer
-                lines = tbuffer.split('\n')
-                ebuffer = lines.pop(-1)
-                df = pd.read_csv(io.StringIO('\n'.join(lines)), sep='\t', header=None)
-                gf = gp.read_file(io.StringIO('\n'.join(df[1].values)))
-                gf['key'] = df[0]
-                gf = gf.set_crs(CRS)
-                now = dt.datetime.now() - START
-                print(f'{now}\twrite\toutput: {str(m).zfill(3)}')
-                for k in gf['key'].drop_duplicates():
-                    now = dt.datetime.now() - START
-                    print(f'{now}\twrite\t{str(m).zfill(3)}:\t{k}')
-                    path = f'output/{k}'
-                    idx = gf['key'] == k
-                    to_file(gf[idx], path)
+def output_csv(fin, engine):
+    ebuffer = ''
+    m = 0
+    while n := fin.read(BUFFERSIZE):
+        now = dt.datetime.now() - START
+        m += 1
+        print(f'{now}\tread\toutput: {str(m).zfill(3)}')
+        bbuffer = io.BytesIO(n)
+        tbuffer = io.TextIOWrapper(bbuffer, encoding='utf-8').read()
+        tbuffer = ebuffer + tbuffer
+        lines = tbuffer.split('\n')
+        ebuffer = lines.pop(-1)
+        df = pd.read_csv(io.StringIO('\n'.join(lines)), sep='\t', header=None)
+        gf = gp.read_file(io.StringIO('\n'.join(df[1].values)), engine=engine)
+        gf['key'] = df[0]
+        gf = gf.set_crs(CRS)
+        now = dt.datetime.now() - START
+        print(f'{now}\twrite\toutput: {str(m).zfill(3)}')
+        for k in gf['key'].drop_duplicates():
+            now = dt.datetime.now() - START
+            print(f'{now}\twrite\t{str(m).zfill(3)}:\t{k}')
+            path = f'output/{k}'
+            idx = gf['key'] == k
+            to_file(gf[idx], path)
 
-def main(filestub, clear_output):
+def to_csv(filestub, engine):
+    with zipfile.ZipFile(f'data/{filestub}.zip') as zf:
+        filename = f'{filestub}.tsv'
+        zf.getinfo(filename)
+        with zf.open(filename) as fin:
+            output_csv(fin, engine)
+
+def main(filestub, clear_output, engine='fiona'):
     infile = f'{filestub}.tsv'
     print(f'Load {filestub} data')
     keys = get_keys(filestub)
@@ -105,7 +113,7 @@ def main(filestub, clear_output):
             break
 
     if create_csv:
-        to_csv(filestub)
+        to_csv(filestub, engine)
 
     for k in keys:
         path = f'output/{k}'
@@ -113,7 +121,7 @@ def main(filestub, clear_output):
         now = dt.datetime.now() - START
         print(f'{now}\twrite\tgpkg:\t{k}')
         outpath = f'{filestub}/{k}.gpkg'
-        gf.to_file(outpath, driver='GPKG', mode='w', layer=k, index=False)
+        gf.to_file(outpath, driver='GPKG', mode='w', layer=k, index=False, engine=engine)
 
     now = dt.datetime.now() - START
     print(f'{now}\tfinish\t{filestub}')
