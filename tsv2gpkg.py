@@ -113,8 +113,11 @@ def main(filestub, clear_output, engine='fiona'):
             break
 
     if create_csv:
+        print(f'File input using {engine} engine')
         to_csv(filestub, engine)
 
+    engine = 'fiona'
+    print(f'GPKG output using {engine} engine')
     for k in keys:
         path = f'output/{k}'
         gf = read_file(path)
@@ -129,4 +132,4 @@ def main(filestub, clear_output, engine='fiona'):
 
 if __name__ == '__main__':
     filestub, clear_output = get_opts()
-    main(filestub, clear_output)
+    main(filestub, clear_output, 'pyogrio')
