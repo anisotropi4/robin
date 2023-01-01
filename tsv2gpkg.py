@@ -23,9 +23,9 @@ def get_opts():
 
     parser.add_argument('filestub', type=str, nargs='?', help='file stub to process', default='CaribbeanIslands-Full')
     parser.add_argument('--clear-output', help='delete output files', action='store_true')
-
+    parser.add_argument('--engine', choices=['fiona', 'pyogrio'], default='fiona')
     args = parser.parse_args()
-    return (args.filestub, args.clear_output)
+    return(args.filestub, args.clear_output, args.engine)
 
 def read_file(filepath, crs=CRS):
     data = pd.read_csv(f'{filepath}.csv', header=None, names=['key', 'geometry'])
@@ -131,5 +131,5 @@ def main(filestub, clear_output, engine='fiona'):
 
 
 if __name__ == '__main__':
-    filestub, clear_output = get_opts()
-    main(filestub, clear_output, 'pyogrio')
+    filestub, clear_output, engine = get_opts()
+    main(filestub, clear_output, engine)
