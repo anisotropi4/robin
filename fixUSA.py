@@ -53,10 +53,15 @@ def main(filestub, key, engine='fiona'):
         pass
 
     tfile = f'data/{filestub}.tsv'
-    with zf.ZipFile(f'data/{key}.zip') as zfin, zf.ZipFile(f'test/USA-Full.zip', 'w', compresslevel=9) as zfout:
+    try:
+        os.unlink(tfile)
+    except FileNotFoundError:
+        pass
+
+    with zf.ZipFile(f'data/{key}.zip') as zfin:
         ifile = f'_{key}.tsv'
         ofile = f'output/{key}.csv'
-        with zfin.open(ifile) as fin, open(ofile, 'w') as fout, zfout.open(tfile, 'w') as zout:
+        with zfin.open(ifile) as fin, open(ofile, 'w') as fout, open(tfile, 'w') as zout:
             ebuffer = ''
             m = 0
             while n := fin.read(BUFFERSIZE):
