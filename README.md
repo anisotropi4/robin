@@ -1,5 +1,5 @@
 # robin
-Scripts to help make road data extracted from Microsoft Bing Maps imagery more amenable 
+Scripts to help make road data extracted from Microsoft Bing Maps imagery more amenable. Recreated repository following delete to purge LFS storage
 
 ## Microsoft Road Detection
 
